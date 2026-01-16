@@ -1,243 +1,850 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>d2query • pocketwiki</title>
+  <meta charset="UTF-8" />
+  <title>d2query pocketwiki</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- if you want a favicon from your main site repo -->
+  <link rel="icon" type="image/png" href="/media/favicon.png" />
+
   <style>
     :root{
-      --bg:#070707; --bg2:#0b0b0b;
+      --bg:#070707;
+      --bg2:#0b0b0b;
       --panel: rgba(255,255,255,0.055);
       --panel2: rgba(255,255,255,0.03);
-      --border: rgba(255,255,255,0.12);
-      --text:#f7f7f7; --muted:#b9b9c2;
-      --pink:#ff78c8; --pink2:#ffb3e6;
+      --border: rgba(255,255,255,0.11);
+
+      --text:#f7f7f7;
+      --muted:#b9b9c2;
+
+      --pink:#ff78c8;
+      --pink2:#ffb3e6;
+      --pink3:#ff4db8;
+
+      --good:#7dffb2;
+      --bad:#ff6b6b;
+      --warn:#ffd36b;
+
+      --shadow: 0 18px 50px rgba(0,0,0,.55);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
+
     *{ box-sizing:border-box; }
-    body{ margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:radial-gradient(900px 700px at 15% 20%, rgba(255,120,200,0.10), transparent 50%), var(--bg); color:var(--text); }
-    .wrap{ max-width:1100px; margin:0 auto; padding:24px; }
-    .top{ background:linear-gradient(180deg, var(--panel), var(--panel2)); border:1px solid var(--border); border-radius:16px; padding:16px; }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    .brand{ display:flex; flex-direction:column; gap:4px; }
-    .brand h1{ margin:0; font-size:18px; letter-spacing:0.5px; }
-    .brand .muted{ color:var(--muted); font-size:12px; }
-    .pill{ padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(0,0,0,0.25); color:var(--muted); font-size:12px; }
-    .search{ margin-top:14px; display:flex; gap:10px; }
-    input{
-      flex:1; padding:12px 12px; border-radius:12px; border:1px solid var(--border);
-      background:rgba(0,0,0,0.35); color:var(--text); outline:none;
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 15% -10%, rgba(255,120,200,.14), transparent 60%),
+        radial-gradient(900px 500px at 105% 10%, rgba(255,120,200,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      font-family: var(--sans);
+      overflow-x:hidden;
     }
-    input:focus{ border-color: rgba(255,120,200,0.45); box-shadow: 0 0 0 3px rgba(255,120,200,0.12); }
-    button{
-      padding:12px 14px; border-radius:12px; border:1px solid rgba(255,120,200,0.35);
-      background:rgba(255,120,200,0.12); color:var(--pink2); cursor:pointer;
+
+    /* sticker layer (uses your main site repo /media/) */
+    .stickers{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      opacity:.18;
+      filter: saturate(1.05) contrast(1.05);
     }
-    button:hover{ background:rgba(255,120,200,0.18); }
-    .grid{ display.grid; }
-    .main{ display:grid; grid-template-columns: 1.4fr 0.8fr; gap:14px; margin-top:14px; }
-    @media (max-width: 920px){ .main{ grid-template-columns: 1fr; } }
-    .card{ background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025)); border:1px solid var(--border); border-radius:16px; padding:14px; }
-    .card h2{ margin:0 0 10px; font-size:14px; color:var(--pink2); }
-    .result{ padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.25); margin:10px 0; }
-    .result .name{ color:var(--pink2); font-weight:700; }
-    .result .meta{ color:var(--muted); font-size:12px; margin-top:4px; }
-    .result pre{ margin:10px 0 0; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.35); overflow:auto; }
-    .muted{ color:var(--muted); }
-    .mini{ font-size:12px; }
-    .favbtn{ float:right; font-size:12px; padding:6px 10px; border-radius:999px; }
-    .hr{ height:1px; background:rgba(255,255,255,0.08); margin:10px 0; }
-    a{ color:var(--pink2); }
+    .st{
+      position:absolute;
+      width:120px;
+      height:auto;
+      transform: rotate(var(--r,0deg));
+      image-rendering:auto;
+      mix-blend-mode: screen;
+      animation: floaty 8s ease-in-out infinite;
+      animation-delay: var(--d, 0s);
+    }
+    @keyframes floaty{
+      0%,100%{ transform: translateY(0) rotate(var(--r,0deg)); }
+      50%{ transform: translateY(-10px) rotate(calc(var(--r,0deg) + 1deg)); }
+    }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      max-width: 1100px;
+      margin: 34px auto 70px;
+      padding: 0 18px;
+    }
+
+    .top{
+      display:flex;
+      gap:16px;
+      align-items:stretch;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .card{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .hero{
+      flex: 1 1 520px;
+      padding: 18px 18px 14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .hero:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(700px 240px at 0% 0%, rgba(255,120,200,.18), transparent 60%),
+        radial-gradient(520px 220px at 100% 30%, rgba(255,120,200,.10), transparent 55%);
+      pointer-events:none;
+    }
+    .hero > *{ position:relative; z-index:1; }
+
+    .title{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin:0 0 8px;
+      font-weight:800;
+      letter-spacing:.4px;
+    }
+    .title .pill{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,120,200,.35);
+      background: rgba(255,120,200,.08);
+      color: var(--pink2);
+      white-space:nowrap;
+    }
+    .subtitle{
+      margin:0 0 14px;
+      color: var(--muted);
+      line-height:1.4;
+    }
+
+    .mini{
+      width: 300px;
+      flex: 0 1 300px;
+      padding: 14px;
+    }
+
+    .grid{
+      margin-top: 16px;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .mini{ width: 100%; flex:1 1 320px; }
+    }
+
+    .searchbox{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 10px;
+    }
+    input[type="text"]{
+      flex: 1 1 340px;
+      min-width: 240px;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      color: var(--text);
+      outline:none;
+      font-family: var(--mono);
+      font-size: 14px;
+    }
+    input[type="text"]:focus{
+      border-color: rgba(255,120,200,.55);
+      box-shadow: 0 0 0 3px rgba(255,120,200,.12);
+    }
+
+    .btn{
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease;
+      user-select:none;
+    }
+    .btn:hover{
+      border-color: rgba(255,120,200,.45);
+      background: rgba(255,120,200,.10);
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    .btn.pink{
+      border-color: rgba(255,120,200,.55);
+      background: rgba(255,120,200,.12);
+    }
+
+    .row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .tag{
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+    }
+    .tag.good{ border-color: rgba(125,255,178,.35); color: rgba(125,255,178,.95); background: rgba(125,255,178,.06); }
+    .tag.bad{ border-color: rgba(255,107,107,.35); color: rgba(255,107,107,.95); background: rgba(255,107,107,.06); }
+    .tag.warn{ border-color: rgba(255,211,107,.35); color: rgba(255,211,107,.95); background: rgba(255,211,107,.06); }
+
+    .panel{
+      padding: 14px;
+    }
+
+    .section-title{
+      margin: 0 0 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--pink2);
+      letter-spacing:.3px;
+    }
+
+    .results{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+
+    .result{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+    }
+
+    .r-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .r-name{
+      margin:0;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .r-meta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .r-desc{
+      margin: 8px 0 0;
+      color: rgba(245,245,255,.9);
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .favbtn{
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor:pointer;
+    }
+    .favbtn.on{
+      border-color: rgba(255,120,200,.55);
+      background: rgba(255,120,200,.12);
+      color: var(--pink2);
+    }
+
+    .drop{
+      border: 1px dashed rgba(255,255,255,.18);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      padding: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .drop.drag{
+      border-color: rgba(255,120,200,.55);
+      background: rgba(255,120,200,.10);
+      color: rgba(255,255,255,.9);
+    }
+
+    .small{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      font-family: var(--mono);
+    }
+
+    .line{
+      height:1px;
+      background: rgba(255,255,255,.10);
+      margin: 12px 0;
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap: 8px 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .kv b{ color: rgba(245,245,255,.92); font-weight:700; }
+
+    .footer{
+      margin-top: 16px;
+      text-align:center;
+      color: rgba(185,185,194,.8);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .ghost{
+      opacity:.75;
+    }
   </style>
 </head>
+
 <body>
+  <!-- sticker layer using your main site repo images -->
+  <div class="stickers" aria-hidden="true">
+    <img class="st" style="left:4%; top:10%; --r:-10deg; --d:-1.2s;" src="/media/tamers12345-mlp.gif" alt="">
+    <img class="st" style="left:84%; top:8%; --r:12deg; --d:-2.3s; width:140px;" src="/media/oneko.gif" alt="">
+    <img class="st" style="left:78%; top:62%; --r:-7deg; --d:-3.6s; width:120px;" src="/media/tamers12345-tamers.gif" alt="">
+    <img class="st" style="left:8%; top:68%; --r:8deg; --d:-4.1s; width:130px;" src="/media/twi%20looking.png" alt="">
+  </div>
+
   <div class="wrap">
     <div class="top">
-      <div class="row" style="justify-content:space-between">
-        <div class="brand">
-          <h1>d2query • pocketwiki</h1>
-          <div class="muted">offline dataset • favorites saved locally • no backend</div>
+      <div class="hero card">
+        <h1 class="title">
+          d2query pocketwiki
+          <span class="pill">static codex</span>
+          <span class="pill ghost" id="modePill">mode: local</span>
+        </h1>
+        <p class="subtitle">
+          client-side search over a local dataset. favorites are stored in your browser.
+          you can also load a bigger dataset locally without uploading it anywhere.
+        </p>
+
+        <div class="searchbox">
+          <input id="q" type="text" placeholder='try: "threaded spike" or "strand"' autocomplete="off" />
+          <button class="btn pink" id="searchBtn">search</button>
+          <button class="btn" id="clearBtn">clear</button>
+          <button class="btn" id="favTabBtn">favorites</button>
         </div>
-        <div class="row">
-          <span class="pill" id="status">loading dataset…</span>
-          <span class="pill" id="count">0 entries</span>
+
+        <div class="row" id="statusRow">
+          <span class="tag warn" id="dataTag">data: loading</span>
+          <span class="tag" id="countTag">items: 0</span>
+          <span class="tag" id="favTag">favorites: 0</span>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="drop" id="dropZone">
+          drag and drop a json file here to load a dataset locally (no upload, it stays in your browser tab).
+          <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <input id="filePick" type="file" accept=".json,application/json" />
+            <button class="btn" id="useBundledBtn">use bundled data</button>
+          </div>
+          <div class="small" style="margin-top:10px;">
+            expected shape: an array of items (each with a name and description), or an object with an `items` array.
+          </div>
         </div>
       </div>
 
-      <div class="search">
-        <input id="q" placeholder="search… (try: threaded, grapple, rift)" autocomplete="off" />
-        <button id="go">search</button>
+      <div class="mini card">
+        <h3 class="section-title">quick info</h3>
+        <div class="kv">
+          <b>site assets</b><span>images load from <code>/media/</code> (your main pages repo)</span>
+          <b>storage</b><span>favorites in <code>localStorage</code></span>
+          <b>deploy</b><span>github pages, no backend</span>
+        </div>
+
+        <div class="line"></div>
+
+        <h3 class="section-title">bungie api (optional)</h3>
+        <div class="small">
+          browser calls need:
+          <ul>
+            <li>api key header (x-api-key)</li>
+            <li>your site origin registered for cors</li>
+          </ul>
+          this page can test manifest access, but full-search is best done with a prebuilt local dataset.
+        </div>
+
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+          <input id="apiKey" type="text" placeholder="bungie api key (stored locally)" style="width:100%;" />
+          <button class="btn" id="saveKeyBtn">save key</button>
+          <button class="btn" id="manifestPingBtn">manifest ping</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <span class="tag" id="apiTag">api: not set</span>
+        </div>
+
+        <div class="footer">
+          d2query-pocketwiki
+        </div>
       </div>
-      <div class="muted mini" style="margin-top:10px">tip: press <code>enter</code> to search, <code>/</code> to focus the box.</div>
     </div>
 
-    <div class="main">
-      <div class="card">
-        <h2>results</h2>
-        <div class="muted mini" id="hint">type something and hit search.</div>
-        <div id="results"></div>
+    <div class="grid">
+      <div class="panel card">
+        <h3 class="section-title" id="resultsTitle">results</h3>
+        <div class="results" id="results"></div>
       </div>
 
-      <div class="card">
-        <h2>favorites</h2>
-        <div class="muted mini">saved in <code>localStorage</code> on this device.</div>
-        <div class="hr"></div>
-        <div id="favs"></div>
-        <div class="hr"></div>
-        <button id="clear">clear favorites</button>
+      <div class="panel card">
+        <h3 class="section-title">help</h3>
+        <div class="small">
+          <div><b>search</b>: type and hit enter, or click search</div>
+          <div><b>favorites</b>: toggle the star button per item</div>
+          <div><b>data</b>: put json files in <code>./data/</code> or drag/drop a big json locally</div>
+          <div style="margin-top:10px; opacity:.9;">
+            if you want “all the info”, you usually:
+            <ol>
+              <li>download/build a dataset locally (from manifest)</li>
+              <li>commit the curated json to <code>data/</code></li>
+              <li>the site searches that json instantly</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="line"></div>
+
+        <h3 class="section-title">data files it will try</h3>
+        <div class="small">
+          this page tries these in order (first one found wins):
+          <ul>
+            <li><code>./data/index.json</code></li>
+            <li><code>./data/abilities.json</code></li>
+            <li><code>./data/items.json</code></li>
+            <li><code>./data/data.json</code></li>
+          </ul>
+          if none exist, it falls back to a tiny built-in sample.
+        </div>
       </div>
     </div>
   </div>
 
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const statusEl = $('status');
-  const countEl = $('count');
-  const qEl = $('q');
-  const resEl = $('results');
-  const favsEl = $('favs');
-  const hintEl = $('hint');
+  <script>
+    const $ = (s) => document.querySelector(s);
 
-  const LS_KEY = 'd2q:favs:v1';
-  let DATA = [];
+    const STORAGE = {
+      favs: "d2q_favs_v1",
+      apiKey: "d2q_bungie_api_key_v1"
+    };
 
-  const norm = (s) => (s || '').toLowerCase().replace(/\s+/g,' ').trim();
+    const state = {
+      items: [],
+      view: "results", // results | favs
+      lastQuery: "",
+      favs: new Set()
+    };
 
-  function loadFavs(){
-    try{ return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
-    catch{ return []; }
-  }
-
-  function saveFavs(list){
-    localStorage.setItem(LS_KEY, JSON.stringify(list));
-  }
-
-  function renderFavs(){
-    const favs = loadFavs();
-    if(!favs.length){
-      favsEl.innerHTML = '<div class="muted mini">(none yet)</div>';
-      return;
+    function safeText(x){
+      return (x == null) ? "" : String(x);
     }
-    favsEl.innerHTML = favs.map(f => {
-      const name = escapeHtml(f.name);
-      const meta = escapeHtml(`${f.class} • ${f.subclass}`);
-      return `<div class="result">
-        <div class="name">${name}</div>
-        <div class="meta">${meta}</div>
-        <button class="favbtn" data-unfav="${name}">remove</button>
-      </div>`;
-    }).join('');
 
-    favsEl.querySelectorAll('[data-unfav]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.getAttribute('data-unfav');
-        const next = loadFavs().filter(x => x.name !== name);
-        saveFavs(next);
-        renderFavs();
+    function normalizeItem(raw){
+      // accept multiple shapes, keep it forgiving
+      const name = safeText(raw.name || raw.title || raw.displayName || raw.key || raw.id || "unknown");
+      const desc = safeText(raw.description || raw.desc || raw.text || raw.summary || "");
+      const type = safeText(raw.type || raw.category || raw.kind || raw.bucket || "");
+      const tags = raw.tags && Array.isArray(raw.tags) ? raw.tags.map(safeText) : [];
+      const hash = raw.hash != null ? String(raw.hash) : (raw.idHash != null ? String(raw.idHash) : "");
+      const id = safeText(raw.id || raw.slug || (hash ? ("hash:" + hash) : name.toLowerCase().replace(/\s+/g,"-")));
+
+      return {
+        id,
+        name,
+        desc,
+        type,
+        tags,
+        hash,
+        raw
+      };
+    }
+
+    function setTag(el, text, cls){
+      el.textContent = text;
+      el.className = "tag" + (cls ? (" " + cls) : "");
+    }
+
+    function loadFavs(){
+      try{
+        const arr = JSON.parse(localStorage.getItem(STORAGE.favs) || "[]");
+        if (Array.isArray(arr)) state.favs = new Set(arr.map(String));
+      }catch(e){}
+      updateFavTag();
+    }
+
+    function saveFavs(){
+      try{
+        localStorage.setItem(STORAGE.favs, JSON.stringify(Array.from(state.favs)));
+      }catch(e){}
+      updateFavTag();
+    }
+
+    function updateFavTag(){
+      $("#favTag").textContent = "favorites: " + state.favs.size;
+    }
+
+    function setModePill(mode){
+      $("#modePill").textContent = "mode: " + mode;
+    }
+
+    function setApiTag(ok, msg){
+      setTag($("#apiTag"), "api: " + msg, ok ? "good" : "bad");
+    }
+
+    function score(item, q){
+      // cheap fuzzy-ish score
+      const nq = q.trim().toLowerCase();
+      if (!nq) return 0;
+
+      const hay = (item.name + " " + item.type + " " + item.tags.join(" ") + " " + item.desc).toLowerCase();
+
+      // token scoring
+      const tokens = nq.split(/\s+/).filter(Boolean);
+      let s = 0;
+      for (const t of tokens){
+        const idx = hay.indexOf(t);
+        if (idx === -1) return 0;
+        // earlier hits score higher
+        s += Math.max(1, 80 - idx);
+        // name boosts
+        if (item.name.toLowerCase().includes(t)) s += 50;
+      }
+      return s;
+    }
+
+    function render(list){
+      const box = $("#results");
+      box.innerHTML = "";
+
+      const title = (state.view === "favs") ? "favorites" : "results";
+      $("#resultsTitle").textContent = title;
+
+      if (!list.length){
+        const d = document.createElement("div");
+        d.className = "result";
+        d.innerHTML = `<div class="small">no matches. try a different query or load a dataset json.</div>`;
+        box.appendChild(d);
+        return;
+      }
+
+      for (const it of list){
+        const isFav = state.favs.has(it.id);
+
+        const card = document.createElement("div");
+        card.className = "result";
+
+        const tags = [];
+        if (it.type) tags.push(it.type);
+        for (const t of (it.tags || [])) tags.push(t);
+
+        const metaBits = [];
+        if (it.hash) metaBits.push("hash " + it.hash);
+        if (tags.length) metaBits.push(tags.slice(0,3).join(" / "));
+
+        card.innerHTML = `
+          <div class="r-top">
+            <div>
+              <h3 class="r-name">${escapeHtml(it.name)}</h3>
+              <div class="r-meta">${metaBits.map(m => `<span class="tag">${escapeHtml(m)}</span>`).join("")}</div>
+            </div>
+            <button class="favbtn ${isFav ? "on" : ""}" data-id="${escapeHtml(it.id)}">${isFav ? "unfavorite" : "favorite"}</button>
+          </div>
+          <p class="r-desc">${escapeHtml(it.desc || "(no description)")}</p>
+        `;
+
+        card.querySelector(".favbtn").addEventListener("click", (e) => {
+          const id = e.currentTarget.getAttribute("data-id");
+          if (state.favs.has(id)) state.favs.delete(id);
+          else state.favs.add(id);
+          saveFavs();
+          doSearch(state.lastQuery);
+        });
+
+        box.appendChild(card);
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function doSearch(q){
+      state.lastQuery = q || "";
+      const trimmed = (q || "").trim();
+
+      if (state.view === "favs"){
+        const favItems = state.items.filter(x => state.favs.has(x.id));
+        if (!trimmed){
+          render(favItems);
+          return;
+        }
+        const scored = favItems
+          .map(x => ({x, s: score(x, trimmed)}))
+          .filter(o => o.s > 0)
+          .sort((a,b) => b.s - a.s)
+          .slice(0, 60)
+          .map(o => o.x);
+        render(scored);
+        return;
+      }
+
+      if (!trimmed){
+        render(state.items.slice(0, 30));
+        return;
+      }
+
+      const scored = state.items
+        .map(x => ({x, s: score(x, trimmed)}))
+        .filter(o => o.s > 0)
+        .sort((a,b) => b.s - a.s)
+        .slice(0, 60)
+        .map(o => o.x);
+
+      render(scored);
+    }
+
+    async function tryLoadJson(path){
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) throw new Error("fetch failed " + res.status);
+      const data = await res.json();
+      return data;
+    }
+
+    function toItems(data){
+      let arr = null;
+      if (Array.isArray(data)) arr = data;
+      else if (data && Array.isArray(data.items)) arr = data.items;
+      else if (data && Array.isArray(data.results)) arr = data.results;
+
+      if (!arr) return [];
+
+      return arr.map(normalizeItem);
+    }
+
+    function setDataset(items, sourceLabel){
+      state.items = items;
+
+      setTag($("#dataTag"), "data: " + sourceLabel, items.length ? "good" : "warn");
+      $("#countTag").textContent = "items: " + items.length;
+
+      // initial render
+      doSearch($("#q").value || "");
+    }
+
+    function bundledSample(){
+      return [
+        { id:"threaded-spike", name:"Threaded Spike", type:"ability", tags:["hunter","strand"], description:"chain projectile that can bounce and return. placeholder sample item." },
+        { id:"weavers-call", name:"Weaver's Call", type:"aspect", tags:["warlock","strand"], description:"placeholder sample item." },
+        { id:"suspension", name:"Suspension", type:"keyword", tags:["strand"], description:"placeholder sample item." }
+      ].map(normalizeItem);
+    }
+
+    async function loadBundled(){
+      const candidates = [
+        "./data/index.json",
+        "./data/abilities.json",
+        "./data/items.json",
+        "./data/data.json"
+      ];
+
+      for (const p of candidates){
+        try{
+          const data = await tryLoadJson(p);
+          const items = toItems(data);
+          if (items.length){
+            setDataset(items, p.replace("./",""));
+            setModePill("local");
+            return;
+          }
+        }catch(e){}
+      }
+
+      // fallback
+      setDataset(bundledSample(), "built-in sample");
+      setModePill("local");
+    }
+
+    function handleDroppedJson(text, label){
+      try{
+        const data = JSON.parse(text);
+        const items = toItems(data);
+        if (!items.length) throw new Error("no items found");
+        setDataset(items, label);
+        setModePill("local file");
+      }catch(e){
+        setTag($("#dataTag"), "data: invalid json", "bad");
+      }
+    }
+
+    function wireDropzone(){
+      const dz = $("#dropZone");
+
+      dz.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dz.classList.add("drag");
       });
-    });
-  }
+      dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+      dz.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        dz.classList.remove("drag");
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!f) return;
 
-  function score(item, q){
-    const hay = norm(`${item.name} ${item.class} ${item.subclass} ${item.text}`);
-    if(!q) return 0;
-    let s = 0;
-    if(hay.includes(q)) s += 1.0;
-    // tiny fuzzy: count of query tokens present
-    const toks = q.split(' ').filter(Boolean);
-    const hit = toks.reduce((acc,t) => acc + (hay.includes(t) ? 1 : 0), 0);
-    s += hit / Math.max(1, toks.length);
-    // slight bias toward name matches
-    if(norm(item.name).includes(q)) s += 0.75;
-    return s;
-  }
+        const text = await f.text();
+        handleDroppedJson(text, "local file: " + f.name);
+      });
 
-  function escapeHtml(str){
-    return (str || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function renderResults(list, q){
-    if(!q){
-      resEl.innerHTML = '';
-      hintEl.textContent = 'type something and hit search.';
-      return;
+      $("#filePick").addEventListener("change", async (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const text = await f.text();
+        handleDroppedJson(text, "local file: " + f.name);
+      });
     }
 
-    hintEl.textContent = `showing top ${list.length} matches for “${q}”`;
-    resEl.innerHTML = list.map(r => {
-      const item = r.item;
-      const name = escapeHtml(item.name);
-      const meta = escapeHtml(`${item.class} • ${item.subclass}`);
-      const text = escapeHtml((item.text || '').trim());
-      return `<div class="result">
-        <button class="favbtn" data-fav="${name}">fav</button>
-        <div class="name">${name}</div>
-        <div class="meta">${meta} • <span class="muted">score ${r.score.toFixed(3)}</span></div>
-        <pre><code>${text}</code></pre>
-      </div>`;
-    }).join('');
+    // bungie api helpers (optional)
+    function getApiKey(){
+      return (localStorage.getItem(STORAGE.apiKey) || "").trim();
+    }
 
-    resEl.querySelectorAll('[data-fav]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.getAttribute('data-fav');
-        const item = DATA.find(x => x.name === name);
-        if(!item) return;
-        const favs = loadFavs();
-        if(!favs.some(x => x.name === item.name)){
-          favs.unshift({ name: item.name, class: item.class, subclass: item.subclass });
-          saveFavs(favs.slice(0, 80));
-          renderFavs();
+    function setApiKey(k){
+      localStorage.setItem(STORAGE.apiKey, k.trim());
+    }
+
+    async function bungieFetch(path){
+      const key = getApiKey();
+      if (!key) throw new Error("no api key set");
+
+      const url = "https://www.bungie.net/Platform" + path;
+      const res = await fetch(url, {
+        headers: { "X-API-Key": key }
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok){
+        const msg = (data && data.Message) ? data.Message : ("http " + res.status);
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    async function manifestPing(){
+      // just tests if your key + cors origin config is correct
+      // endpoint: /Destiny2/Manifest/ (GetDestinyManifest)
+      const data = await bungieFetch("/Destiny2/Manifest/");
+      return data;
+    }
+
+    function wireApi(){
+      const k = getApiKey();
+      if (k) setApiTag(true, "set");
+      else setApiTag(false, "not set");
+
+      $("#saveKeyBtn").addEventListener("click", () => {
+        const key = $("#apiKey").value.trim();
+        if (!key){
+          setApiTag(false, "not set");
+          return;
+        }
+        setApiKey(key);
+        setApiTag(true, "saved");
+      });
+
+      $("#manifestPingBtn").addEventListener("click", async () => {
+        try{
+          setApiTag(true, "checking...");
+          const data = await manifestPing();
+          // bungie responses usually include Response
+          if (data && data.Response){
+            setApiTag(true, "manifest ok");
+            setModePill("local + api");
+          }else{
+            setApiTag(false, "unexpected response");
+          }
+        }catch(e){
+          setApiTag(false, e.message || "failed");
         }
       });
-    });
-  }
 
-  function searchNow(){
-    const q = norm(qEl.value);
-    if(!q){ renderResults([], ''); return; }
-
-    const scored = DATA.map(item => ({ item, score: score(item, q) }))
-      .filter(x => x.score > 0)
-      .sort((a,b) => b.score - a.score)
-      .slice(0, 12);
-
-    renderResults(scored, q);
-  }
-
-  async function load(){
-    try{
-      const res = await fetch('data/abilities.json', { cache: 'no-store' });
-      DATA = await res.json();
-      statusEl.textContent = 'dataset ready';
-      countEl.textContent = `${DATA.length} entries`;
-    }catch(e){
-      statusEl.textContent = 'dataset failed';
-      statusEl.style.borderColor = 'rgba(255,120,200,0.55)';
-      hintEl.textContent = 'could not load data/abilities.json';
-      console.error(e);
+      // preload stored key into the input so you can see it exists
+      $("#apiKey").value = getApiKey();
     }
 
-    renderFavs();
-  }
+    function wireUi(){
+      $("#searchBtn").addEventListener("click", () => doSearch($("#q").value));
+      $("#clearBtn").addEventListener("click", () => { $("#q").value = ""; doSearch(""); });
+      $("#q").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doSearch($("#q").value);
+      });
 
-  $('go').addEventListener('click', searchNow);
-  qEl.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter') searchNow();
-  });
-  $('clear').addEventListener('click', () => {
-    saveFavs([]);
-    renderFavs();
-  });
+      $("#favTabBtn").addEventListener("click", () => {
+        state.view = (state.view === "results") ? "favs" : "results";
+        $("#favTabBtn").textContent = (state.view === "favs") ? "back to results" : "favorites";
+        doSearch($("#q").value);
+      });
 
-  window.addEventListener('keydown', (e) => {
-    if(e.key === '/' && document.activeElement !== qEl){
-      e.preventDefault();
-      qEl.focus();
+      $("#useBundledBtn").addEventListener("click", () => loadBundled());
     }
-  });
 
-  load();
-})();
-</script>
+    // init
+    (function(){
+      loadFavs();
+      wireUi();
+      wireDropzone();
+      wireApi();
+      loadBundled();
+    })();
+  </script>
 </body>
 </html>
